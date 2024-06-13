@@ -32,3 +32,14 @@ def checkuidtoken(uid, token):
         return user, verify_otp
     except Exception:
         return None, None
+
+
+def checkpassuidtoken(uid, token):
+    try:
+        pk = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=pk)
+        verify_link = Link.objects.get(
+            user=user, uid=uid, token=token, password_reset=True, valid_until__gte=timezone.now())
+        return user, verify_link
+    except Exception:
+        return None, None

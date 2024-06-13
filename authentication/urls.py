@@ -9,5 +9,10 @@ urlpatterns = [
          OtpVerifyView.as_view(), name='verify_otp'),
     path('resend-otp/<str:uid>/<str:token>/',
          ResendOtpView.as_view(), name='resend_otp'),
-         
+
+    path('forgot-password/',
+         ForgotPasswordView.as_view(), name='forgot_password'),
+    path('reset-password/<str:uid>/<str:token>/',
+         ResetPasswordView.as_view(), name='reset_password'),
+
 ]

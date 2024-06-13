@@ -88,3 +88,67 @@ class ResendOtpView(APIView):
         verify_otp.valid_until = valid_until
         verify_otp.save()
         return Response({"message": 'OTP successfully resent. Please check your email.'}, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordView(APIView):
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        try:
+            user = None
+            if '@' in username:
+                user = User.objects.get(email=username)
+            else:
+                user = User.objects.get(username=username)
+
+        except:
+            return Response({'message': 'user not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        valid_until = timezone.now() + timedelta(minutes=20)
+        uid, token = generate_uid_and_token(user)
+
+        subject = 'Password reset mail'
+
+        send_verification_email.delay(
+            subject, uid, token, valid_until,  user.username, user.email)
+
+        reset_link, created = Link.objects.get_or_create(user=user, password_reset=True, defaults={
+                                                         'token': token, 'valid_until': valid_until, 'uid': uid})
+
+        if not created:
+            reset_link.uid = uid
+            reset_link.token = token
+            reset_link.valid_until = valid_until
+            reset_link.save()
+
+        pos = 'merchant' if user.is_merchant else (
+            'superuser' if user.is_superuser else 'user')
+
+        return Response({'pos': pos}, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    def get(self, request, uid, token):
+        user, verify_link = checkpassuidtoken(uid, token)
+        if not (user and verify_link):
+            return Response({'message': "Invalid activation link"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Good to go.'}, status=status.HTTP_200_OK)
+
+    def post(self, request, uid, token):
+        user, verify_link = checkpassuidtoken(uid, token)
+        if not (user and verify_link):
+            return Response({'message': "Invalid activation link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password = serializer.validated_data['password']
+
+        user.set_password(password)
+        user.save()
+        verify_link.delete()
+        pos = 'merchant' if user.is_merchant else (
+            'superuser' if user.is_superuser else 'user')
+        return Response({'pos': pos}, status=status.HTTP_200_OK)
