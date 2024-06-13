@@ -82,3 +82,47 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Password mismatch.'
             )
+
+
+class UserLoginSerializer(ForgotPasswordSerializer):
+    password = serializers.CharField(write_only=True)
+
+
+class CustomTokenRefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+    access = serializers.CharField(read_only=True)
+    token_class = RefreshToken
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, str]:
+        refresh = self.token_class(attrs["refresh"])
+
+        user_id = refresh.payload.get('user_id')
+
+        user = User.objects.get(id=user_id)
+
+        role = 'merchant' if user.is_merchant else (
+            'superuser' if user.is_superuser else 'user')
+
+        refresh['role'] = role
+        refresh['user'] = user.username
+        refresh['is_blocked'] = user.is_blocked
+
+        data = {"access": str(refresh.access_token)}
+
+        if api_settings.ROTATE_REFRESH_TOKENS:
+            if api_settings.BLACKLIST_AFTER_ROTATION:
+                try:
+                    # Attempt to blacklist the given refresh token
+                    refresh.blacklist()
+                except AttributeError:
+                    # If blacklist app not installed, `blacklist` method will
+                    # not be present
+                    pass
+
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+
+            data["refresh"] = str(refresh)
+
+        return data
