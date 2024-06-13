@@ -52,3 +52,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Password mismatch.'
             )
+
+
+class UserOtpVerificationSerializer(serializers.Serializer):
+    otp = serializers.IntegerField()
