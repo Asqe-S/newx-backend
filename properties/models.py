@@ -18,14 +18,10 @@ class Property(models.Model):
         return f'{self.merchant.username} {self.name}'
 
 
-def property_photo_upload_path(instance, filename):
-   return f"property_photos/{instance.property.id}/{filename}"
-
-
 class PropertyPhoto(models.Model):
     property = models.ForeignKey(
         Property, on_delete=models.CASCADE, related_name='photos')
-    photo = models.ImageField(upload_to=property_photo_upload_path)
+    photo = models.ImageField(upload_to='property_photos/')
 
     class Meta:
         ordering = ["-id"]

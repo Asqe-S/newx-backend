@@ -4,9 +4,8 @@ from rest_framework.viewsets import ModelViewSet
 
 from properties.models import *
 from properties.serializers import *
-from userprofile.utils import MerchantAuth
 from django.core.files.storage import default_storage
-
+from properties.utils import MerchantAuth
 
 class PropertiesViewSet(ModelViewSet):
     queryset = Property.objects.all()
