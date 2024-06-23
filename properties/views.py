@@ -6,6 +6,11 @@ from properties.models import *
 from properties.serializers import *
 from django.core.files.storage import default_storage
 from properties.utils import MerchantAuth
+from rest_framework.pagination import PageNumberPagination
+
+class CustomPagination(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = 'page_s'
 
 class PropertiesViewSet(ModelViewSet):
     queryset = Property.objects.all()
